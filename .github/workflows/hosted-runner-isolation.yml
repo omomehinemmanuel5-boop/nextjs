@@ -1,0 +1,58 @@
+name: Isolated Hosted Runner Allocation Test
+
+on:
+  push:
+    branches:
+      - diagnostics/hosted-runner-isolation-2026-11-24
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: hosted-runner-isolation-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  runner-probe:
+    name: Hosted runner probe ${{ matrix.probe }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        probe: [1, 2, 3]
+    steps:
+      - name: Verify runner assignment and shell execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "PROBE_ID=${{ matrix.probe }}"
+          echo "RUN_ID=${GITHUB_RUN_ID}"
+          echo "RUN_ATTEMPT=${GITHUB_RUN_ATTEMPT}"
+          echo "REPOSITORY=${GITHUB_REPOSITORY}"
+          echo "RUNNER_NAME=${RUNNER_NAME}"
+          echo "RUNNER_OS=${RUNNER_OS}"
+          echo "RUNNER_ARCH=${RUNNER_ARCH}"
+          echo "RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT}"
+          echo "UTC_START=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          test -n "${RUNNER_NAME}"
+          test "${RUNNER_OS}" = "Linux"
+          echo "SHELL_EXECUTION=PASS"
+          echo "IDENTITY_ASSERTIONS=PASS"
+
+      - name: Verify basic outbound HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          getent ahosts github.com | head -n 3
+          curl --fail --silent --show-error --location --max-time 20 --output /dev/null --write-out 'HTTP_STATUS=%{http_code}\n' https://github.com/
+          echo "NETWORK_ASSERTIONS=PASS"
+
+      - name: Emit completion marker
+        if: always()
+        shell: bash
+        run: |
+          echo "PROBE_ID=${{ matrix.probe }}"
+          echo "JOB_STATUS=${{ job.status }}"
+          echo "COMPLETION_MARKER=RUNNER_PROBE_FINISHED"
