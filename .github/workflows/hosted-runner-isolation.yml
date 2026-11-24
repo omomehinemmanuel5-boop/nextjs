@@ -1,3 +1,4 @@
+# Repeatability pass: same isolated checks, no application code or credentials.
 name: Isolated Hosted Runner Allocation Test
 
 on:
@@ -46,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           getent ahosts github.com | head -n 3
-          curl --fail --silent --show-error --location --max-time 20 --output /dev/null --write-out 'HTTP_STATUS=%{http_code}\n' https://github.com/
+          curl --fail --silent --show-error --location --max-time 20 --output /dev/null --write-out 'HTTP_STATUS=%{http_code}\\n' https://github.com/
           echo "NETWORK_ASSERTIONS=PASS"
 
       - name: Emit completion marker
